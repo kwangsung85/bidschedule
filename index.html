@@ -313,6 +313,7 @@
       <div class="sync-actions">
         <button class="primary" id="syncBtn">지금 동기화</button>
         <button id="sourceBtn">설정</button>
+        <button id="railShare" title="시트가 연결된 공유 주소">공유 링크</button>
       </div>
     </div>
   </aside>
@@ -334,6 +335,12 @@
         </div>
       </div>
     </header>
+
+    <div id="demoBanner" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 30px 0;padding:9px 12px;border:1px solid var(--seal);background:rgba(174,51,43,.06);font-size:12px;color:var(--ink-2)">
+      <b style="color:var(--seal)">시트 연결 전</b>
+      <span>아래 일정은 <b>미리보기용 예시</b>입니다. 시트를 연결하면 실제 일정으로 바뀝니다.</span>
+      <button id="bannerConnect" style="margin-left:auto;border:1px solid var(--seal);color:var(--seal);padding:4px 10px;font-size:11.5px">시트 연결</button>
+    </div>
 
     <div class="monthbar">
       <button class="navbtn" id="prevM" aria-label="이전 달">‹</button>
@@ -554,51 +561,30 @@ function toNumber(v){
 
 /* ---------------- 예시(시드) 데이터 ---------------- */
 var DEMO = [
-  {name:'2027년 국립어린이청소년도서관 미꿈소 운영', status:'conf', open:'2026-10-26', close:'2026-11-10', budget:454545455, prob:454545455,
-   note:'10/20 사전규격(25일 마감). 사업비 5억(25년 6.07억).\n11월 중순 가선정 예정.', hist:'26년 10/26 공고 ~ 11/10 10시 마감\n25년 10/29 공고 · 11/11 마감\n24년 10/29 공고'},
-  {name:'2027년 청소년 디지털 문화교육 사업제안 (엠보사)', status:'est', open:'2026-10-28', close:'2026-11-15', budget:440000000, prob:440000000,
-   note:'2020~2025년 연차사업 → 26년부터 입찰 전환.\n10월 말 공고, 11월 중순 마감 예상.', hist:'25년 10/23 공고(자사사이트) · 11/5 마감'},
-  {name:'2027년 강남미래교육센터 프로그램 운영', status:'est', open:'2026-11-04', close:'2026-11-24', budget:1510500000, prob:1510500000,
-   note:'10/8 사전규격 등록. 본규격 11월 초 예상, 12/2 발표 예정.', hist:'25년 11/7 공고 · 11/15 마감\n24년 11/22 공고'},
-  {name:'2027년 양천구 미래교육센터 운영 용역', status:'conf', open:'2026-11-13', close:'2026-12-04', budget:783318182, prob:783318182,
-   note:'사전규격 11월 초. 11/13~12/4 본공고, 12/14 발표 예정.', hist:'25년 11/21 공고 · 12/12 마감\n25년 1/16 공고(25년 사업)'},
-  {name:'2027년 서울특별시 서울퓨처랩 부문 용역', status:'est', open:'2026-11-18', close:'2026-12-05', budget:1263636364, prob:null,
-   note:'26년 첫 수주 실패(에이럭스). 담당부서가 서울시립과학관 교육지원과로 이전.\n11월 중순 공고 예상.', hist:'25년 11/3 공고 · 11/14 마감\n24년 11/4 공고'},
-  {name:'2027년 구로창의융합교육장 프로그램 운영 용역', status:'est', open:'2026-11-15', close:'2026-12-03', budget:381818182, prob:381818182,
-   note:'26년 첫 수주. 기존 이엔오즈 수행 사업.', hist:'25년 11/7 사전규격 · 11/14 공고 · 12/4 마감'},
-  {name:'2027년 서리풀 넷 위탁 용역', status:'tbd', open:'2026-12-14', close:'2026-12-28', budget:1095454545, prob:1095454545,
-   note:'사업비가 인건비 구조라 올해 방식 미정. 사업제안 검토 예정.', hist:'25년 12/9 공고 · 12/22 마감\n24년 12/16 공고'},
-  {name:'광진미래기술체험관 프로그램 운영 및 관리 용역', status:'tbd', open:'2026-12-16', close:'2026-12-30', budget:872727273, prob:null,
-   note:'26년은 2월 초 마감. 10/27 담당자 통화 — 봄에 올릴 듯하나 확정된 것 없음.', hist:'26년 1/26 공고 · 2/3 마감\n25년 6/26 공고'},
-  {name:'2027 경기도서관 실천하는 AI 도서관 프로그램 운영', status:'tbd', open:'2026-12-12', close:'2026-12-23', budget:227272727, prob:null,
-   note:'27년 예산 축소 예정, 참여 여부 미정.', hist:'25년 12/12 공고 · 12/23 마감'},
-  {name:'(강남구 직장인) 강남구 혁신인재육성아카데미', status:'tbd', open:'2027-01-15', close:'2027-01-30', budget:624800000, prob:440000000,
-   note:'27년 혁신인재·미래산업 중 1개만 참여 검토 중(사업부).', hist:'24년 1/16 공고\n25년 1/13~31 공모\n26년 1/15~1/30 공모'},
-  {name:'(강남구 직장인) 강남구 미래산업 취·창업 아카데미 운영', status:'tbd', open:'2027-01-15', close:'2027-01-30', budget:415530000, prob:null,
-   note:'혁신인재·미래산업 중 1개만 참여 검토 중(사업부).', hist:'24년 1/16 공고\n25년 1/20~2/4 공모\n26년 1/15~1/30 공모'},
-  {name:'2027 학교로 찾아가는 디지털 미래인재 프로젝트(초등) 용역', status:'tbd', open:'2027-01-18', close:'2027-01-30', budget:1123618182, prob:1123618182,
-   note:'초·중등 합산 28억 → 24억으로 축소 예정.', hist:'26년 1/18 공고 · 1/30 마감\n25년 2/7 공고\n24년 1/19 공고'},
-  {name:'2027 학교로 찾아가는 디지털 미래인재 프로젝트(중등) 용역', status:'tbd', open:'2027-01-19', close:'2027-01-30', budget:1072545455, prob:null,
-   note:'', hist:'26년 1/19 공고 · 1/30 마감\n25년 2/7 공고\n24년 1/19 공고'},
-  {name:'메이플스토리월드 기반 중고등 교육 프로그램 개발 및 운영', status:'tbd', open:'2027-01-19', close:'2027-02-02', budget:400000000, prob:null,
-   note:'27년 사업 소멸 예정.', hist:'26년 1/19 ~ 2/2'},
-  {name:'2027년 취창업 여성인재개발 아카데미 사업', status:'tbd', open:'2027-02-19', close:'2027-03-06', budget:35800000, prob:null,
-   note:'26년 수주 실패. 27년은 미참여 예정.', hist:'26년 2/19 ~ 3/6 공고'},
-  {name:'2027년 서울특별시 AI디지털배움터 교육 운영 용역', status:'tbd', open:'2027-02-11', close:'2027-03-24', budget:1450000000, prob:null,
-   note:'26년 에이럭스 수주. 27년 진행 여부 미정.', hist:'26년 2/11 ~ 3/24 공고'},
-  {name:'2027년도 디지털 새싹 운영', status:'tbd', open:'2027-03-06', close:'2027-04-05', budget:909090909, prob:909090909,
-   note:'27년 사업 유지 예상. 4/19 PT 전례.', hist:'26년 3/6~4/5 공모 · 4/19 PT\n25년 3/12 공모\n24년 1/10 공모'},
-  {name:'2027년 경기AI디지털배움터 교육 운영', status:'tbd', open:'2027-03-24', close:'2027-04-14', budget:3036363636, prob:3036363636,
-   note:'티엘디 컨소시엄 비율 조정 희망.', hist:'26년 3/24~4/14 공고'},
-  {name:'2027년 디지털배움터 전문강사 파견교육 운영', status:'tbd', open:'2027-03-17', close:'2027-04-17', budget:1545454545, prob:1545454545,
-   note:'', hist:'26년 3/17~4/17 공고\n25년 3/11 공고\n24년 3/4 공고'},
-  {name:'2027년 디지털유리 교육콘텐츠 개발 사업', status:'tbd', open:'2027-03-30', close:'2027-04-21', budget:759090090, prob:759090090,
-   note:'', hist:'26년 3/30~4/21 공고\n25년 3/27 공고\n24년 3/14 공고'},
-  {name:'과의존 청소년 대상 디지털 디톡스 기획 및 운영', status:'tbd', open:'2027-04-30', close:'2027-05-22', budget:1272545455, prob:null,
-   note:'26년 신규 사업, 에이블런 수주.', hist:'26년 4/30~5/22 공고'},
-  {name:'2027년 AI 교육원 교수·학습자료 개발 용역', status:'tbd', open:'2027-07-20', close:'2027-08-03', budget:226363636, prob:null,
-   note:'26년 신규 사업. 27년 사업 유무 미지수.', hist:'26년 7/20~8/3 공고'}
+  {name:"2027년 국립어린이청소년도서관 미꿈소 운영", status:'est', open:'2026-10-26', close:'2026-11-10', budget:454545455, prob:454545455, undated:false, note:"10/20 사전규격(25일 마감), 사업비 5억(25년 6.07억)", hist:"26년 10/26~11/10 10시 마감,\\n25년 10/29 공고, 11/11 마감,\\n24년 10/23 입찰 공고\\n"},
+  {name:"2027년 청소년 디지털 문화교육 사업제안(생보사)", status:'est', open:'2026-10-15', close:'2026-10-25', budget:440000000, prob:440000000, undated:false, note:"기존에 매년 연장(2020년~2025년)으로 진행되다가 26년부터 입찰로 진행", hist:"25년 10/23 공고(자체사이트),11/5 마감"},
+  {name:"2027년 강남미래교육센터 프로그램 운영", status:'est', open:'2026-11-04', close:'2026-11-24', budget:1510500000, prob:1510500000, undated:false, note:"9/16 올해 좀 빠르게 할 예정, 추석이후 RFP 작업한다고함\\n10/8 사전규격 올라옴, 본규격은 11월 초 예상", hist:"2024년 11/22 입찰공고\\n25년 11/17 공고, 12/3 마감"},
+  {name:"2027년 양천구 미래교육센터 운영 용역", status:'est', open:'2026-11-13', close:'2026-12-04', budget:783318182, prob:783318182, undated:false, note:"사전규격 11월 초, 11/13~12/4 본공고, 12/14 발표 예정 ", hist:"25년 1/10 입찰공고(25년 사업)\\n25년 11/21 공고, 12/12 마감(26년사업)"},
+  {name:"2027년 서울특별시 서울퓨처랩 운영 용역", status:'est', open:'2026-11-05', close:'2026-11-15', budget:1263636364, prob:null, undated:false, note:"-22년 부터 매년 수주하다가 26년 첫 수주 실패(에이럭스)\\n-올해 서울시립과학관 교육지원과로 담당부서 이관, 11월 중순 공고 예상", hist:"24년 11/4 입찰공고\\n25년 11/3 공고, 11/14 마감"},
+  {name:"2027년 구로창의융합교육장 프로그램 운영 용역", status:'est', open:'2026-11-05', close:'2026-11-15', budget:381818182, prob:381818182, undated:false, note:"26년 첫 수주함, 기존 이앤오즈가 했던 사업", hist:"25년 11/7 사전규격, 11/14 공고, 12/4 마감"},
+  {name:"2027년 서리풀 샘 위탁 용역", status:'tbd', open:'2026-12-01', close:'2026-12-01', budget:1095454545, prob:1095454545, undated:true, note:"사업비가 안남는 구조라 올애 어떻게 할지 모르겠음, 사업예산 검토 예정임 ", hist:"2024년 12/16 입찰공고\\n25년 12/9 공고, 12/22 마감"},
+  {name:"광진미래기술체험관 프로그램 운영 및 관리 용역", status:'tbd', open:'2026-12-01', close:'2026-12-01', budget:872727273, prob:null, undated:true, note:"26년 2월에 입찰 띄웠고, 올해 언제 뜰지 모름\\n(10/27 담당자 통화: 올해안에는 띄울거같은데 현재 정해진게 없다고함)", hist:"2025년 6/26 입찰공고\\n26년 1/26 공고, 2/3 마감"},
+  {name:"2027 경기도서관 실험하는 AI 도서관 프로그램 운영", status:'tbd', open:'2026-12-01', close:'2026-12-01', budget:227272727, prob:null, undated:true, note:"26년 첫 사업에 수주함, 27년 예산 줄어든다고 하여 참여여부 미지수 ", hist:"25년 12/12 공고, 12/23 마감"},
+  {name:"(강남구 취창업)강남구 혁신인재육성아카데미", status:'tbd', open:'2027-01-01', close:'2027-01-01', budget:624880000, prob:440000000, undated:true, note:"27년 혁신인재, 미래산업 중 1개만 들어가려고 고민중(사업부)", hist:"2024년 1/16 공모,  2025년 1/13~31 공모,\\n26년 1/15~1/30 공모"},
+  {name:"(강남구 취창업)강남구 미래산업 취·창업 아카데미 운영", status:'tbd', open:'2027-01-01', close:'2027-01-01', budget:415530000, prob:null, undated:true, note:"27년 혁신인재, 미래산업 중 1개만 들어가려고 고민중(사업부)", hist:"2024년 1/16 공모,  2025년 1/20~2/4 공모\\n26년 1/15~1/30 공모"},
+  {name:"2027 학교로 찾아가는 디지털 미래인재 프로젝트(초등)」용역", status:'tbd', open:'2027-01-01', close:'2027-01-01', budget:1123818182, prob:1123818182, undated:true, note:"초등/중등 합쳐서 29억에서 24억으로 줄어들 예정 ", hist:"24년 1/19 입찰공고, 25년 2/7 입찰공고,\\n26년 1/19공고 1/30 마감"},
+  {name:"2027 학교로 찾아가는 디지털 미래인재 프로젝트(중등)」용역", status:'tbd', open:'2027-01-01', close:'2027-01-01', budget:1072545455, prob:null, undated:true, note:"", hist:"24년 1/19 입찰공고, 25년 2/7 입찰공고,\\n26년 1/19공고 1/30 마감"},
+  {name:"메이플스토리월드 기반 중고등 교육 프로그램 개발 및 운영", status:'tbd', open:'2027-02-01', close:'2027-02-01', budget:400000000, prob:null, undated:true, note:"26년 첫 사업, 27년 사업 소멸 ", hist:"26년 1/19(메일)~2/2"},
+  {name:"2027년 취창업 여성인재개발 아카데미 사업", status:'tbd', open:'2027-02-01', close:'2027-02-01', budget:35800000, prob:null, undated:true, note:"26년 수주 실패, 27년은 참여 안할 예정", hist:"26년 2/19~3/6공고"},
+  {name:"2027년 서울특별시 AI디지털배움터 교육 운영 용역", status:'tbd', open:'2027-03-01', close:'2027-03-01', budget:1459090909, prob:null, undated:true, note:"26년 에이럭스(기존기관)이 수주, 27년 진행여부 미정 ", hist:"26년 2/11~3/24"},
+  {name:"2027년도 디지털 새싹 운영", status:'tbd', open:'2027-03-01', close:'2027-03-01', budget:909090909, prob:909090909, undated:true, note:"27년 사업 있을 것으로 보임 ", hist:"24년 1/10 공모, 25년 3/12 공모\\n26년 3/6~4/5 공모, 4/19 PT"},
+  {name:"2027년 경기AI디지털배움터 교육 운영", status:'tbd', open:'2027-03-01', close:'2027-03-01', budget:3036363636, prob:3036363636, undated:true, note:"2027년 티엠디 컨소시엄 비율 조정 예정 ", hist:"26년 3/24~4/14 공고"},
+  {name:"2027년 디지털윤리 전문강사 파견교육 운영", status:'tbd', open:'2027-03-01', close:'2027-03-01', budget:1545454545, prob:1545454545, undated:true, note:"2027년 진행여부 및 사업비 확인 전 ", hist:"24년 3/4 입찰공고, 25년 3/11 입찰공고,\\n26년 3/17~4/17 공고"},
+  {name:"2027년 디지털윤리 교육콘텐츠 개발 사업", status:'tbd', open:'2027-03-01', close:'2027-03-01', budget:759090090, prob:759090090, undated:true, note:"2027년 진행여부 및 사업비 확인 전 ", hist:"24년 3/14 입찰공고, 25년 3/27 입찰공고,\\n26년 3/30~4/21 공고"},
+  {name:"과의존 청소년 대상 디지털 디톡스 기획 및 운영", status:'tbd', open:'2027-05-01', close:'2027-05-01', budget:1272545455, prob:null, undated:true, note:"2026년 신규 사업, 에이블런이 수주\\n2027년 진행여부 및 사업비 확인 전 ", hist:"26년 4/30~5/22 공고"},
+  {name:"2027년 AI 교육안 교수·학습자료 개발 용역", status:'tbd', open:'2027-07-01', close:'2027-07-01', budget:226363636, prob:null, undated:true, note:"2026년 신규사업, 27년 사업유무 미지수 ", hist:"26년 7/20~8/3 공고"}
 ];
+
 
 /* ---------------- 상태 ---------------- */
 var state = {
@@ -811,6 +797,8 @@ function render(){
     $('monthCount').textContent = visible().length+'건 · '+eok(visible().reduce(function(s,e){return s+(e.budget||0);},0));
     renderGantt();
   }
+  var demo=!cfg.id;
+  $('demoBanner').style.display = demo? 'flex':'none';
   $('footLeft').textContent = state.label + (state.q? ' · "'+state.q+'" 검색':'');
   $('footRight').textContent = '기준일 '+ymd(TODAY)+' · '+state.data.length+'건 · '+BUILD;
 }
@@ -1355,7 +1343,9 @@ function loadCfg(){
   try{
     var q=new URLSearchParams(location.search);
     if(q.get('sheet')) cfg.id=sheetId(q.get('sheet'))||cfg.id;
+    if(q.get('gid')!==null) cfg.gid=q.get('gid');
     if(q.get('tab')!==null) cfg.tab=q.get('tab');
+    if(q.get('exclude')!==null) cfg.exclude=q.get('exclude');
     if(q.get('range')!==null) cfg.range=q.get('range');
     if(q.get('year')) cfg.year=q.get('year');
     if(q.get('auto')) cfg.auto=q.get('auto');
@@ -1446,6 +1436,7 @@ document.addEventListener('keydown', function(e){
   if(e.key==='ArrowRight') shiftMonth(1);
 });
 
+$('bannerConnect').addEventListener('click', openModal);
 $('sourceBtn').addEventListener('click', openModal);
 $('syncBtn').addEventListener('click', function(){ syncNow(false); });
 $('closeModal').addEventListener('click', function(){ $('sourceModal').classList.remove('is-on'); });
@@ -1474,12 +1465,15 @@ $('resetData').addEventListener('click', function(){
   setSync('idle');
   msg('예시 데이터로 되돌렸습니다.','ok');
 });
+$('railShare').addEventListener('click', function(){ $('shareBtn').click(); });
 $('shareBtn').addEventListener('click', function(){
   try{ readCfgForm(); }catch(err){ msg(err.message,'err'); return; }
   var base=location.href.split('?')[0].split('#')[0];
   var q='?sheet='+encodeURIComponent(cfg.id)+'&year='+encodeURIComponent(cfg.year);
+  if(cfg.gid) q+='&gid='+encodeURIComponent(cfg.gid);
   if(cfg.tab) q+='&tab='+encodeURIComponent(cfg.tab);
   if(cfg.range) q+='&range='+encodeURIComponent(cfg.range);
+  if(cfg.exclude) q+='&exclude='+encodeURIComponent(cfg.exclude);
   q+='&auto='+cfg.auto;
   var url=base+q;
   var copy=function(){
