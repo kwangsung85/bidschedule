@@ -391,12 +391,12 @@
 
     <div class="fgrid">
       <div style="display:flex;flex-direction:column;gap:6px">
-        <label for="cfgTab">탭 이름</label>
-        <input id="cfgTab" type="text" placeholder="입찰DB (비우면 첫 탭)">
+        <label for="cfgTab">탭 이름 또는 gid</label>
+        <input id="cfgTab" type="text" placeholder="비우면 첫 탭 · 숫자만 넣으면 gid">
       </div>
       <div style="display:flex;flex-direction:column;gap:6px">
         <label for="cfgRange">범위 (선택)</label>
-        <input id="cfgRange" type="text" placeholder="A6:N29 — 상단 블록만">
+        <input id="cfgRange" type="text" placeholder="비워두는 게 가장 안전 (예: A4:N40)">
       </div>
     </div>
     <p class="hint">범위를 지정하면 그 구역만 읽습니다. 2027년 계획이 시트 위쪽에만 있으면 <code>A6:N40</code> 처럼 지정해 두세요. 비우면 탭 전체를 읽습니다.</p>
@@ -424,6 +424,7 @@
       <button class="btn" id="loadText">붙여넣은 데이터 사용</button>
       <button class="btn btn--ghost" id="resetData">예시로 되돌리기</button>
       <button class="btn btn--ghost" id="closeModal">닫기</button>
+      <span style="margin-left:auto;align-self:center;font-family:var(--mono);font-size:10px;color:var(--ink-3)">build v5</span>
     </div>
     <div class="srcmsg" id="srcMsg"></div>
 
@@ -444,6 +445,7 @@
 
 var TODAY = new Date(); TODAY.setHours(0,0,0,0);
 var DAY = 86400000;
+var BUILD='v5';
 var ST_LABEL = { conf:'확정', est:'예상', tbd:'미정' };
 var WD = ['일','월','화','수','목','금','토'];
 
@@ -503,7 +505,7 @@ function inferStatus(statText, openText, closeText){
   if(/^(예상|예정)/.test(s)) return 'est';
   var t=(String(openText||'')+' '+String(closeText||'')).trim();
   if(/공고전|미정|미지수/.test(t)) return 'tbd';
-  if(/예상|예정|가능|검토|이후/.test(t)) return 'est';
+  if(/예상|예정|가선정|가능|검토|이후|발표/.test(t)) return 'est';
   return t? 'conf' : 'tbd';
 }
 function monthNum(v){
@@ -581,7 +583,7 @@ var state = {
   label:'예시 데이터',
   domain:{a:new Date(TODAY.getFullYear(),0,1), b:new Date(TODAY.getFullYear(),11,31)}
 };
-var cfg = { id:'', tab:'', range:'', year:'2027', auto:1 };
+var cfg = { id:'', gid:'', tab:'', range:'', year:'2027', auto:1 };
 var sync = { state:'idle', at:null, msg:'' };
 
 /* ---------------- 모델 ---------------- */
@@ -597,6 +599,7 @@ function hydrate(list){
       status: ST_LABEL[e.status]? e.status : 'tbd',
       o:o, c:c,
       budget:num(e.budget), prob:num(e.prob),
+      undated:!!e.undated, partial:!!e.partial,
       note:String(e.note||'').trim(), hist:String(e.hist||'').trim()
     });
   });
@@ -781,7 +784,7 @@ function render(){
     renderGantt();
   }
   $('footLeft').textContent = state.label + (state.q? ' · "'+state.q+'" 검색':'');
-  $('footRight').textContent = '기준일 '+ymd(TODAY)+' · '+state.data.length+'건';
+  $('footRight').textContent = '기준일 '+ymd(TODAY)+' · '+state.data.length+'건 · '+BUILD;
 }
 
 /* ---------------- 상세 ---------------- */
@@ -789,7 +792,7 @@ function openEvent(id){
   var e=state.data.filter(function(x){ return x.id===id; })[0];
   if(!e) return;
   var d=diffDays(TODAY,e.c);
-  var ddTxt = d===0?'D-DAY':(d>0?'D-'+d:'마감 D+'+(-d));
+  var ddTxt = e.undated? '일정 미정' : (d===0?'D-DAY':(d>0?'D-'+d:'마감 D+'+(-d)));
   var ratio=(e.budget&&e.prob!==null)?Math.round(e.prob/e.budget*100):null;
   $('dEyebrow').textContent = ST_LABEL[e.status]+' · '+ym(e.o)+' 입찰';
   $('dTitle').textContent = e.name;
@@ -804,8 +807,9 @@ function openEvent(id){
       '<dt>사업비</dt><dd class="num">'+won(e.budget)+'원</dd>'+
       '<dt>긍정 수주</dt><dd class="num">'+(e.prob!==null? won(e.prob)+'원'+(ratio!==null?' ('+ratio+'%)':''):'—')+'</dd>'+
       '<dt>확정 여부</dt><dd>'+ST_LABEL[e.status]+'</dd>'+
-      '<dt>입찰 기간</dt><dd class="num">'+(diffDays(e.o,e.c)+1)+'일</dd>'+
+      '<dt>입찰 기간</dt><dd class="num">'+(e.undated? '미정' : (diffDays(e.o,e.c)+1)+'일')+'</dd>'+
     '</dl>'+
+    (e.undated? '<div class="dsec"><h3>일정</h3><p>시트에 공고일·마감일이 아직 없습니다(“공고전”). 월 칸을 기준으로 이 달에만 표시했습니다.</p></div>' : '')+
     '<div class="dsec"><h3>비고</h3><p>'+(e.note?esc(e.note):'기재된 비고가 없습니다.')+'</p></div>'+
     (e.hist?'<div class="dsec"><h3>과거 입찰 시기</h3><p class="hist">'+esc(e.hist)+'</p></div>':'');
   showDrawer();
@@ -877,10 +881,81 @@ function colMap(header){
     yy: yy
   };
 }
-function rowsToEvents(header, data){
-  var ix=colMap(header);
+function mergeHeader(top, bottom){
+  var n=Math.max(top.length, bottom?bottom.length:0), out=[];
+  for(var i=0;i<n;i++){
+    var a=String(top[i]==null?'':top[i]).trim();
+    var b=String(bottom&&bottom[i]!=null?bottom[i]:'').trim();
+    out.push(a&&b&&normH(a)!==normH(b)? a+'_'+b : (a||b));
+  }
+  return out;
+}
+var HEAD_HINTS=['사업명','과업명','용역명','공고일','마감일','입찰마감','확정','사업비','추정가','예산','비고','입찰시기','연도','월'];
+function countHints(hdr){
+  var c=0;
+  HEAD_HINTS.forEach(function(k){ if(pickIdx(hdr,[k])>=0) c++; });
+  return c;
+}
+function hasDateCol(hdr){
+  return pickIdx(hdr,['공고일','마감일','입찰공고','입찰마감'])>=0;
+}
+function okHeader(hdr){
+  if(!hdr) return false;
+  var ix=colMap(hdr);
+  if(ix.name<0 || !hasDateCol(hdr) || countHints(hdr)<3) return false;
+  // 머리글 셀은 짧은 라벨이어야 한다 (데이터 행이 섞여 들어오는 것을 차단)
+  for(var i=0;i<hdr.length;i++){
+    var c=String(hdr[i]==null?'':hdr[i]).trim();
+    if(!c) continue;
+    if(c.length>24) return false;
+    if(/^[\d,]{7,}$/.test(c)) return false;
+  }
+  var nm=String(hdr[ix.name]||'');
+  return /사업명|과업명|용역명|공고명|사업$|용역$/.test(nm);
+}
+function findHeader(rows){
+  var limit=Math.min(rows.length,60), best=null, bestScore=-1;
+  for(var i=0;i<limit;i++){
+    var plain=rows[i];
+    if(plain && okHeader(plain)){
+      var sc=countHints(plain)+ (hasDateCol(plain)?3:0) + (colMap(plain).year>=0?1:0) + (colMap(plain).month>=0?1:0);
+      if(sc>bestScore){ bestScore=sc; best={header:plain, dataStart:i+1, score:sc, merged:false}; }
+    }
+    if(i+1<rows.length){
+      var m=mergeHeader(plain||[], rows[i+1]);
+      if(okHeader(m)){
+        var sc2=countHints(m)+(hasDateCol(m)?3:0)+(colMap(m).year>=0?1:0)+(colMap(m).month>=0?1:0)+1;
+        if(sc2>bestScore){ bestScore=sc2; best={header:m, dataStart:i+2, score:sc2, merged:true}; }
+      }
+    }
+  }
+  return best;
+}
+function detectCols(data, ix, nameIdx){
+  var n=Math.max.apply(null, data.map(function(r){ return r.length; }).concat([0]));
+  var yearC=-1, monthC=-1, yearScore=0, monthScore=0;
+  for(var c=0;c<n;c++){
+    if(c===nameIdx) continue;
+    var y=0, m=0, f=0;
+    data.forEach(function(r){
+      var v=String(r[c]==null?'':r[c]).trim();
+      if(!v) return;
+      f++;
+      if(/^\d{4}\s*년?$/.test(v)) y++;
+      else if(/^(\d{1,2})\s*월(\s*[~\-]\s*\d{1,2}\s*월)?$/.test(v)) m++;
+    });
+    if(f>=3 && y/f>=0.25 && y>yearScore){ yearScore=y; yearC=c; }
+    if(f>=3 && m/f>=0.25 && m>monthScore){ monthScore=m; monthC=c; }
+  }
+  if(ix.year<0 && yearC>=0) ix.year=yearC;
+  if(ix.month<0 && monthC>=0) ix.month=monthC;
+  return ix;
+}
+function rowsToEvents(header, data, ixOverride){
+  var ix=ixOverride||colMap(header);
   if(ix.name<0) return null;
-  var out=[], skipped=0, filtered=0;
+  ix=detectCols(data, ix, ix.name);
+  var out=[], skipped=0, filtered=0, lastYr=null, lastMo=null;
   data.forEach(function(r){
     var name=String(r[ix.name]||'').trim();
     if(!name || /^(합계|총계|소계)/.test(name)) { skipped++; return; }
@@ -888,23 +963,35 @@ function rowsToEvents(header, data){
       var yy=String(r[ix.yy]||'').replace(/[^0-9]/g,'');
       if(yy && yy!==String(cfg.year)) { filtered++; return; }
     }
-    var yr = ix.year>=0? (parseInt(String(r[ix.year]).replace(/[^0-9]/g,''),10)||null) : null;
-    var mo = ix.month>=0? monthNum(r[ix.month]) : null;
-    if(!yr) yr = (+cfg.year||TODAY.getFullYear());
+    if(ix.year>=0){
+      var yv=parseInt(String(r[ix.year]||'').replace(/[^0-9]/g,''),10);
+      if(yv>=2000 && yv<=2100) lastYr=yv;
+    }
+    var moRaw = ix.month>=0? monthNum(r[ix.month]) : null;
+    if(moRaw) lastMo=moRaw;
+    var yr = lastYr || (+cfg.year||TODAY.getFullYear());
+    var mo = moRaw || lastMo;
     var oTxt = ix.open>=0? String(r[ix.open]||'') : '';
     var cTxt = ix.close>=0? String(r[ix.close]||'') : '';
     var o = parseSoftDate(oTxt, yr, mo);
     var c = parseSoftDate(cTxt, yr, mo);
-    if(!o && mo) o = new Date(yr, mo-1, 10);
-    if(!c && mo) c = new Date(yr, mo-1, 25);
-    if(!o && c) o = addDays(c,-14);
-    if(o && !c) c = addDays(o,14);
-    if(!o || !c){ skipped++; return; }
-    if(o>c){ var t=o; o=c; c=t; }
+    var undated=false, partial=false;
+    if(o && c && c<o){
+      // 12월 공고 → 1월 마감 같은 해 넘김 보정
+      if(c.getMonth() < o.getMonth()-6) c=new Date(c.getFullYear()+1, c.getMonth(), c.getDate());
+    }
+    if(o && !c){ c=o; partial=true; }
+    if(!o && c){ o=c; partial=true; }
+    if(!o && !c){
+      if(mo){ o=new Date(yr, mo-1, 1); c=new Date(yr, mo-1, 1); undated=true; }
+      else { skipped++; return; }
+    }
+    if(o && c && c<o){ var t0=o; o=c; c=t0; }
     out.push({
       name:name,
       status: inferStatus(ix.stat>=0? r[ix.stat] : '', oTxt, cTxt),
       open: ymd(o), close: ymd(c),
+      undated: undated, partial: partial,
       budget: ix.budget>=0? toNumber(r[ix.budget]) : null,
       prob: ix.prob>=0? toNumber(r[ix.prob]) : null,
       note: ix.note>=0? String(r[ix.note]||'').trim() : '',
@@ -913,20 +1000,94 @@ function rowsToEvents(header, data){
   });
   return {list:out, skipped:skipped, filtered:filtered, ix:ix};
 }
-function parseRows(rows){
-  if(!rows.length) throw new Error('데이터가 비어 있습니다.');
-  var attempt = rowsToEvents(rows[0], rows.slice(1));
-  if(attempt && attempt.list.length) return attempt;
-  if(rows.length>2){
-    var merged = rows[0].map(function(h,i){
-      var a=String(h||'').trim(), b=String(rows[1][i]||'').trim();
-      return a&&b&&a!==b? a+'_'+b : (a||b);
+
+var DATE_RE=/(\d{1,2}\s*[.\/\-월]\s*\d{1,2})|(\d{1,2}\s*월)|공고전|예상|예정/;
+function guessColumns(rows){
+  var body=rows.filter(function(r){
+    var f=r.filter(function(c){ return String(c||'').trim()!==''; }).length;
+    return f>=4;
+  });
+  if(body.length<3) return null;
+  var cols=Math.max.apply(null, rows.map(function(r){ return r.length; }));
+  var stats=[];
+  for(var c=0;c<cols;c++){
+    var texts=[], dateH=0, numH=0, longH=0, filled=0;
+    body.forEach(function(r){
+      var v=String(r[c]==null?'':r[c]).trim();
+      if(!v) return;
+      filled++;
+      texts.push(v);
+      if(DATE_RE.test(v)) dateH++;
+      if(/^[\d,.\s]+$/.test(v) && toNumber(v)!==null && toNumber(v)>99999) numH++;
+      if(v.length>=8) longH++;
     });
-    var second = rowsToEvents(merged, rows.slice(2));
-    if(second && second.list.length) return second;
+    if(!filled) { stats.push(null); continue; }
+    var avg=texts.reduce(function(a,t){return a+t.length;},0)/texts.length;
+    stats.push({c:c, filled:filled, dateH:dateH, numH:numH, longH:longH, avg:avg, fillRate:filled/body.length});
   }
-  var head = rows[0].map(function(h){ return String(h||'').trim(); }).filter(Boolean).slice(0,8).join(' / ');
-  throw new Error('머리글에서 "사업명" 열을 찾지 못했습니다.\n읽은 첫 줄: '+(head||'(비어 있음)')+'\n범위에 머리글 행이 포함되도록 지정해 주세요.');
+  // 사업명: 길고 긴 텍스트가 많은 열 (날짜 열 제외)
+  var name=null, bestName=-1;
+  stats.forEach(function(st){
+    if(!st) return;
+    if(st.dateH/st.filled>0.5) return;
+    var score=st.longH*3 + st.avg;
+    if(score>bestName){ bestName=score; name=st.c; }
+  });
+  if(name===null) return null;
+  // 날짜 열: 날짜 비율 높은 순 상위 2개
+  var dcands=stats.filter(function(st){ return st && st.dateH>=2 && st.c!==name && st.dateH/st.filled>=0.35; })
+    .sort(function(a,b){ return (b.dateH/b.filled)-(a.dateH/a.filled) || a.c-b.c; })
+    .slice(0,2).sort(function(a,b){ return a.c-b.c; });
+  // 금액 열: 큰 숫자가 많은 순 상위 2개
+  var ncands=stats.filter(function(st){ return st && st.numH>=2 && st.c!==name; })
+    .sort(function(a,b){ return b.numH-a.numH || a.c-b.c; });
+  var budget = ncands[0]? ncands[0].c : -1;
+  var prob = ncands[1]? ncands[1].c : -1;
+  // 비고/과거: 남은 텍스트 열 중 평균 길이 긴 순
+  var rest=stats.filter(function(st){
+      return st && st.c!==name && st.c!==budget && st.c!==prob
+        && dcands.map(function(d){return d.c;}).indexOf(st.c)<0;
+    }).sort(function(a,b){ return b.avg-a.avg; });
+  return {
+    name:name, open: dcands[0]? dcands[0].c : -1, close: dcands[1]? dcands[1].c : -1,
+    stat:-1, budget:budget, prob:prob,
+    note: rest[0]? rest[0].c : -1, hist: rest[1]? rest[1].c : -1,
+    year:-1, month:-1, yy:-1
+  };
+}
+function parseRows(rows){
+  if(!rows || !rows.length) throw new Error('데이터가 비어 있습니다.');
+  var h=findHeader(rows);
+  if(h){
+    var res=rowsToEvents(h.header, rows.slice(h.dataStart));
+    if(res && res.list.length){
+      res.headerRow=h.dataStart;
+      res.merged=h.header.join(' | ');
+      res.mode='header';
+      return res;
+    }
+  }
+  var g=guessColumns(rows);
+  if(g){
+    var body=rows.filter(function(r){
+      return r.filter(function(c){ return String(c||'').trim()!==''; }).length>=4;
+    });
+    var res3=rowsToEvents([], body, g);
+    if(res3 && res3.list.length){
+      res3.headerRow=0; res3.mode='guess';
+      res3.mapping=g;
+      return res3;
+    }
+  }
+  {
+    var sample=rows.slice(0,3).map(function(r){
+      return r.filter(function(c){ return String(c).trim()!==''; }).slice(0,4).join(' / ');
+    }).filter(Boolean).join('\n');
+    var err=new Error('머리글 행도, 자동 추론할 열도 찾지 못했습니다.\n읽은 앞부분:\n'+(sample||'(내용 없음)'));
+    err.code='NO_HEADER';
+    err.dump=sample;
+    throw err;
+  }
 }
 
 /* --- URL 정규화 --- */
@@ -937,17 +1098,23 @@ function sheetId(url){
   if(/^[a-zA-Z0-9\-_]{20,}$/.test(url.trim())) return url.trim();
   return '';
 }
-function gvizUrl(id, mode, cb){
+function sheetGid(url){
+  var m=/[#&?]gid=(\d+)/.exec(String(url||''));
+  return m? m[1] : '';
+}
+function gvizUrl(id, mode, cb, rangeOverride){
   var u='https://docs.google.com/spreadsheets/d/'+id+'/gviz/tq?';
   var p=[];
   p.push('tqx='+encodeURIComponent(mode==='json'? 'out:json;responseHandler='+cb : 'out:csv'));
-  if(cfg.tab) p.push('sheet='+encodeURIComponent(cfg.tab));
-  if(cfg.range) p.push('range='+encodeURIComponent(cfg.range));
+  if(cfg.gid) p.push('gid='+encodeURIComponent(cfg.gid));
+  else if(cfg.tab) p.push('sheet='+encodeURIComponent(cfg.tab));
+  var rg = (rangeOverride===undefined)? cfg.range : rangeOverride;
+  if(rg) p.push('range='+encodeURIComponent(rg));
   return u+p.join('&');
 }
 
 /* --- JSONP --- */
-function fetchJSONP(cb){
+function fetchJSONP(cb, rangeOverride){
   return new Promise(function(resolve,reject){
     var name='__gviz'+Math.floor(Math.random()*1e6);
     var s=document.createElement('script');
@@ -959,7 +1126,7 @@ function fetchJSONP(cb){
       try{ resolve(gvizJSON(resp)); }catch(e){ reject(e); }
     };
     s.onerror=function(){ if(!done){ done=true; cleanup(); reject(new Error('스크립트 로드 실패')); } };
-    s.src=gvizUrl(cfg.id,'json',name);
+    s.src=gvizUrl(cfg.id,'json',name,rangeOverride);
     document.head.appendChild(s);
   });
 }
@@ -976,34 +1143,22 @@ function gvizJSON(resp){
     });
   });
   var filled=labels.filter(function(x){ return String(x).trim()!==''; }).length;
-  var header;
-  if(filled>=3){
-    header=labels;
-  } else if(rows.length && rows[0].filter(function(x){ return String(x).trim()!==''; }).length>=3){
-    header=rows.shift();
-  } else {
-    header=labels;
-  }
-  return [header].concat(rows);
+  if(filled>=3) rows.unshift(labels);
+  return rows;
 }
 
 /* ---------------- 동기화 ---------------- */
 function setSync(st,msg){ sync.state=st; sync.msg=msg||''; if(st==='live') sync.at=new Date(); renderRail(); }
 
-function syncNow(silent){
-  if(!cfg.id){
-    if(!silent) openModal(), msg('시트 주소를 먼저 넣어 주세요.','err');
-    return Promise.resolve(false);
-  }
-  setSync('busy');
-  return fetch(gvizUrl(cfg.id,'csv'), {cache:'no-store'}).then(function(r){
+function fetchSheetText(rangeOverride){
+  return fetch(gvizUrl(cfg.id,'csv',null,rangeOverride), {cache:'no-store'}).then(function(r){
     if(!r.ok) throw new Error('HTTP '+r.status);
     return r.text();
   }).then(function(t){
     if(/^\s*</.test(t)) throw new Error('CSV 대신 HTML이 왔습니다');
     return t;
   }).catch(function(){
-    return fetchJSONP(function(){}).then(function(rows){
+    return fetchJSONP(function(){}, rangeOverride).then(function(rows){
       return rows.map(function(r){
         return r.map(function(v){
           v = v===null||v===undefined? '' : String(v);
@@ -1011,21 +1166,53 @@ function syncNow(silent){
         }).join(',');
       }).join('\n');
     });
-  }).then(function(t){
-    var res=parseRows(parseCSV(t));
-    if(!res.list.length) throw new Error('행을 읽지 못했습니다');
-    setData(res.list, '구글 시트 연동');
-    try{ localStorage.setItem('bidCSV', t); }catch(e){}
+  });
+}
+
+function syncNow(silent){
+  if(!cfg.id){
+    if(!silent){ openModal(); msg('시트 주소를 먼저 넣어 주세요.','err'); }
+    return Promise.resolve(false);
+  }
+  if(!silent) setSync('busy');
+  var note='';
+  function attempt(rg){
+    return fetchSheetText(rg).then(function(t){
+      var res=parseRows(parseCSV(t));
+      res._csv=t;
+      return res;
+    });
+  }
+  return attempt(cfg.range).catch(function(err){
+    if(cfg.range && err.code==='NO_HEADER'){
+      note='지정한 범위('+cfg.range+')에 머리글 행이 없어 탭 전체를 다시 읽었습니다.';
+      return attempt('').then(function(res){ res._autoRange=true; return res; });
+    }
+    throw err;
+  }).then(function(res){
+    setData(res.list,'구글 시트 연동');
+    try{ localStorage.setItem('bidCSV', res._csv); }catch(e){}
     setSync('live');
     var extra=[];
+    var und=res.list.filter(function(x){ return x.undated; }).length;
+    if(und) extra.push('일정 미정 '+und+'건(해당 월 1일 표시)');
     if(res.skipped) extra.push('날짜 없음 '+res.skipped+'건 제외');
     if(res.filtered) extra.push('사업연도 불일치 '+res.filtered+'건 제외');
-    $('footLeft').textContent = '구글 시트 연동 · '+res.list.length+'건'+(extra.length? ' ('+extra.join(', ')+')':'');
-    if(!silent) msg(res.list.length+'건을 읽었습니다.'+(extra.length? '\n'+extra.join(' · '):''),'ok');
+    $('footLeft').textContent='구글 시트 연동 · '+res.list.length+'건'+(extra.length? ' ('+extra.join(', ')+')':'');
+    if(!silent){
+      var how = res.mode==='guess' ? '열 자동추론' : ('머리글 '+(res.headerRow||1)+'행'+(res._autoRange?'·자동탐색':''));
+      var t=(res.list.length+'건을 읽었습니다. ('+how+')');
+      if(extra.length) t+='\n'+extra.join(' · ');
+      if(note) t='⚠ '+note+'\n\n'+t+'\n범위를 비우거나 A4:N40 처럼 머리글부터 지정하면 더 빠릅니다.';
+      msg(t, note? 'ok':'ok');
+    }
     return true;
   }).catch(function(err){
     setSync('err');
-    if(!silent) msg('불러오지 못했습니다 — '+err.message+'\n\n확인 순서\n1) 시트 공유 설정이 "링크가 있는 모든 사용자 · 뷰어"인지\n2) 탭 이름과 범위가 실제 시트와 맞는지\n3) 머리글 행이 범위에 포함되는지\n\n계속 안 되면 아래 붙여넣기 칸을 쓰시면 됩니다.','err');
+    if(!silent){
+      var help='불러오지 못했습니다 — '+err.message+'\n\n확인 순서\n1) 시트 공유 → 링크가 있는 모든 사용자 · 뷰어 (팀원에게도 보이려면 필수)\n2) 탭 이름을 비우고 범위도 비워서 다시 시도\n3) 공고일·마감일 열이 있는지 (사업비·비고만으로는 표시 불가)\n\n계속 안 되면 아래 CSV 붙여넣기로 임시 운영할 수 있습니다.';
+      msg(help,'err');
+    }
     return false;
   });
 }
@@ -1048,7 +1235,7 @@ function loadCfg(){
 }
 function fillCfgForm(){
   $('cfgUrl').value = cfg.id? 'https://docs.google.com/spreadsheets/d/'+cfg.id+'/edit' : '';
-  $('cfgTab').value = cfg.tab||'';
+  $('cfgTab').value = cfg.gid || cfg.tab || '';
   $('cfgRange').value = cfg.range||'';
   $('cfgYear').value = cfg.year||'2027';
   $('cfgAuto').value = cfg.auto||1;
@@ -1057,7 +1244,11 @@ function readCfgForm(){
   var id=sheetId($('cfgUrl').value);
   if(!id) throw new Error('시트 주소에서 ID를 찾지 못했습니다. 주소 전체를 붙여넣어 주세요.');
   cfg.id=id;
-  cfg.tab=$('cfgTab').value.trim();
+  var tabv=$('cfgTab').value.trim();
+  cfg.gid=''; cfg.tab='';
+  if(/^\d{5,}$/.test(tabv)) cfg.gid=tabv; else cfg.tab=tabv;
+  var gidFromUrl=sheetGid($('cfgUrl').value);
+  if(!cfg.tab && !cfg.gid && gidFromUrl) cfg.gid=gidFromUrl;
   cfg.range=$('cfgRange').value.trim().replace(/^.*!/,'');
   cfg.year=($('cfgYear').value||'2027').trim();
   var a=parseInt($('cfgAuto').value,10); cfg.auto=(a>=0&&a<=60)?a:1;
