@@ -337,8 +337,8 @@
     </header>
 
     <div id="demoBanner" style="display:none;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 30px 0;padding:9px 12px;border:1px solid var(--seal);background:rgba(174,51,43,.06);font-size:12px;color:var(--ink-2)">
-      <b style="color:var(--seal)">시트 연결 전</b>
-      <span>아래 일정은 <b>미리보기용 예시</b>입니다. 시트를 연결하면 실제 일정으로 바뀝니다.</span>
+      <b style="color:var(--seal)">시트를 불러오지 못했습니다</b>
+      <span>아래 일정은 마지막으로 성공한 데이터입니다. 네트워크·공유 설정을 확인하세요.</span>
       <button id="bannerConnect" style="margin-left:auto;border:1px solid var(--seal);color:var(--seal);padding:4px 10px;font-size:11.5px">시트 연결</button>
     </div>
 
@@ -480,7 +480,7 @@
 
 var TODAY = new Date(); TODAY.setHours(0,0,0,0);
 var DAY = 86400000;
-var BUILD='v6';
+var BUILD='v8';
 var ST_LABEL = { conf:'확정', est:'예상', tbd:'미정' };
 var WD = ['일','월','화','수','목','금','토'];
 
@@ -597,7 +597,14 @@ var state = {
   label:'예시 데이터',
   domain:{a:new Date(TODAY.getFullYear(),0,1), b:new Date(TODAY.getFullYear(),11,31)}
 };
-var cfg = { id:'', gid:'', tab:'', range:'', year:'2027', auto:1, rowFrom:'', rowTo:'', onlyYear:false, dropFuture:true, exclude:'' };
+/* ===== 기본 시트 설정 (파일에 내장 — 모든 브라우저가 동일하게 읽는다) ===== */
+var DEFAULT_CFG = {
+  id:'1n1NRya10Ade4J3lR4kaAhMNY0PQxTApOL2hx9UlEvJ8',
+  gid:'2039754816',
+  tab:'', range:'', year:'2027', auto:1,
+  rowFrom:'', rowTo:'', onlyYear:false, dropFuture:true, exclude:''
+};
+var cfg = JSON.parse(JSON.stringify(DEFAULT_CFG));
 var sync = { state:'idle', at:null, msg:'' };
 
 /* ---------------- 모델 ---------------- */
@@ -797,8 +804,7 @@ function render(){
     $('monthCount').textContent = visible().length+'건 · '+eok(visible().reduce(function(s,e){return s+(e.budget||0);},0));
     renderGantt();
   }
-  var demo=!cfg.id;
-  $('demoBanner').style.display = demo? 'flex':'none';
+  $('demoBanner').style.display = (sync.state==='err')? 'flex':'none';
   $('footLeft').textContent = state.label + (state.q? ' · "'+state.q+'" 검색':'');
   $('footRight').textContent = '기준일 '+ymd(TODAY)+' · '+state.data.length+'건 · '+BUILD;
 }
@@ -1336,9 +1342,10 @@ function syncNow(silent){
 /* ---------------- 설정 저장/복원 ---------------- */
 function saveCfg(){ try{ localStorage.setItem('bidCfg', JSON.stringify(cfg)); }catch(e){} }
 function loadCfg(){
+  cfg = JSON.parse(JSON.stringify(DEFAULT_CFG));
   try{
     var s=JSON.parse(localStorage.getItem('bidCfg')||'null');
-    if(s && typeof s==='object'){ for(var k in cfg){ if(s[k]!==undefined) cfg[k]=s[k]; } }
+    if(s && typeof s==='object'){ for(var k in cfg){ if(s[k]!==undefined && s[k]!=='') cfg[k]=s[k]; } }
   }catch(e){}
   try{
     var q=new URLSearchParams(location.search);
@@ -1489,6 +1496,7 @@ $('shareBtn').addEventListener('click', function(){
 loadCfg();
 setData(DEMO,'예시 데이터 · 시트 연결 전');
 if(cfg.id){
+  setSync('busy');
   try{
     var cached=localStorage.getItem('bidCSV');
     if(cached && cached.trim()){
