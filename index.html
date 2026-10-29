@@ -413,6 +413,34 @@
     </div>
     <p class="hint">'사업연도' 열이 있으면 그 값이 일치하는 행만 사용합니다. 없으면 범위 안의 모든 행을 2027 계획으로 봅니다.</p>
 
+    <div class="fgrid">
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label for="cfgRowFrom">시작 행</label>
+        <input id="cfgRowFrom" type="text" placeholder="예: 8 (비우면 전체)">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <label for="cfgRowTo">끝 행</label>
+        <input id="cfgRowTo" type="text" placeholder="예: 60">
+      </div>
+    </div>
+    <label style="display:flex;align-items:center;gap:7px;text-transform:none;letter-spacing:0;font-family:var(--sans);font-size:12px;color:var(--ink-2);cursor:pointer">
+      <input type="checkbox" id="cfgDropFuture" style="width:14px;height:14px;accent-color:#101E26">
+      <b><span id="cfgYearLbl">2027</span>년 이후 블록 제외</b> (아래쪽 2028년 계획 등 집계에서 빼기 · 권장)
+    </label>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <label for="cfgExclude">집계에서 뺄 키워드 (쉼표로 구분)</label>
+      <input id="cfgExclude" type="text" placeholder="예: 2028, 합계 (보통은 비워두세요)">
+    </div>
+    <label style="display:flex;align-items:center;gap:7px;text-transform:none;letter-spacing:0;font-family:var(--sans);font-size:12px;color:var(--ink-2);cursor:pointer">
+      <input type="checkbox" id="cfgOnlyYear" style="width:14px;height:14px;accent-color:#101E26">
+      사업명에 '<span id="cfgYearLbl2">2027</span>'이 들어간 행만 집계 (더 엄격)
+    </label>
+    <p class="hint">합계가 예상보다 크면 대부분 <b>같은 탭 아래쪽의 다른 연도 블록</b>까지 읽은 경우입니다. 위 두 칸으로 2027 구역의 행 번호를 지정하거나, 체크박스를 켜세요. 아래 <b>읽은 행 미리보기</b>로 바로 확인할 수 있습니다.</p>
+    <div id="previewBox" style="display:none;border:1px solid var(--line);background:var(--surface);max-height:190px;overflow:auto">
+      <div id="previewHead" style="position:sticky;top:0;background:var(--paper);border-bottom:1px solid var(--line);padding:5px 9px;font-family:var(--mono);font-size:10px;color:var(--ink-2);display:flex;justify-content:space-between"></div>
+      <div id="previewRows" style="font-family:var(--mono);font-size:10.5px;line-height:1.7"></div>
+    </div>
+
     <div class="modal-actions" style="margin-top:4px">
       <button class="btn" id="loadUrl">연결하고 불러오기</button>
       <button class="btn btn--ghost" id="shareBtn">공유 링크 복사</button>
@@ -445,7 +473,7 @@
 
 var TODAY = new Date(); TODAY.setHours(0,0,0,0);
 var DAY = 86400000;
-var BUILD='v5';
+var BUILD='v6';
 var ST_LABEL = { conf:'확정', est:'예상', tbd:'미정' };
 var WD = ['일','월','화','수','목','금','토'];
 
@@ -583,7 +611,7 @@ var state = {
   label:'예시 데이터',
   domain:{a:new Date(TODAY.getFullYear(),0,1), b:new Date(TODAY.getFullYear(),11,31)}
 };
-var cfg = { id:'', gid:'', tab:'', range:'', year:'2027', auto:1 };
+var cfg = { id:'', gid:'', tab:'', range:'', year:'2027', auto:1, rowFrom:'', rowTo:'', onlyYear:false, dropFuture:true, exclude:'' };
 var sync = { state:'idle', at:null, msg:'' };
 
 /* ---------------- 모델 ---------------- */
@@ -599,7 +627,7 @@ function hydrate(list){
       status: ST_LABEL[e.status]? e.status : 'tbd',
       o:o, c:c,
       budget:num(e.budget), prob:num(e.prob),
-      undated:!!e.undated, partial:!!e.partial,
+      undated:!!e.undated, partial:!!e.partial, row:e.row||0, yr:e.yr||null,
       note:String(e.note||'').trim(), hist:String(e.hist||'').trim()
     });
   });
@@ -949,14 +977,40 @@ function detectCols(data, ix, nameIdx){
   }
   if(ix.year<0 && yearC>=0) ix.year=yearC;
   if(ix.month<0 && monthC>=0) ix.month=monthC;
+  if(ix.budget<0 || ix.prob<0){
+    var cands=[];
+    for(var c2=0;c2<n;c2++){
+      if(c2===ix.name||c2===ix.open||c2===ix.close||c2===ix.year||c2===ix.month) continue;
+      var nums=0, f2=0;
+      data.forEach(function(r){
+        var v=String(r[c2]==null?'':r[c2]).trim();
+        if(!v) return;
+        f2++;
+        if(toNumber(v)!==null && toNumber(v)>99999) nums++;
+      });
+      if(nums>=2) cands.push({c:c2, nums:nums, ratio:f2? nums/f2:0});
+    }
+    cands.sort(function(a,b){ return b.nums-a.nums || a.c-b.c; });
+    if(ix.budget<0 && cands[0]) ix.budget=cands[0].c;
+    if(ix.prob<0 && cands[1]) ix.prob=cands[1].c;
+  }
   return ix;
 }
-function rowsToEvents(header, data, ixOverride){
+function rowsToEvents(header, data, ixOverride, baseRow){
   var ix=ixOverride||colMap(header);
   if(ix.name<0) return null;
   ix=detectCols(data, ix, ix.name);
-  var out=[], skipped=0, filtered=0, lastYr=null, lastMo=null;
-  data.forEach(function(r){
+  var out=[], skipped=0, filtered=0, lastYr=null, lastMo=null, stopped=false;
+  var _base = baseRow || 1;
+  data.forEach(function(r, _idx){
+    if(stopped) return;
+    var joined=r.join(' ');
+    // 다음 연도 블록의 섹션 제목이 나오면 그 아래는 읽지 않는다
+    if(out.length && /수주사업\s*스케줄/.test(joined) && !(ix.name>=0 && String(r[ix.name]||'').indexOf('스케줄')>=0 && String(r[ix.name]||'').trim().length>4 && false)){
+      stopped=true; return;
+    }
+    // 매출목표·확정+긍정수주매출 합 같은 요약행 제외
+    if(/매출목표|긍정수주매출\s*합|수주매출\s*일정/.test(joined)) { skipped++; return; }
     var name=String(r[ix.name]||'').trim();
     if(!name || /^(합계|총계|소계)/.test(name)) { skipped++; return; }
     if(ix.yy>=0 && cfg.year){
@@ -990,7 +1044,7 @@ function rowsToEvents(header, data, ixOverride){
     out.push({
       name:name,
       status: inferStatus(ix.stat>=0? r[ix.stat] : '', oTxt, cTxt),
-      open: ymd(o), close: ymd(c),
+      open: ymd(o), close: ymd(c), row: _base+_idx, yr: yr,
       undated: undated, partial: partial,
       budget: ix.budget>=0? toNumber(r[ix.budget]) : null,
       prob: ix.prob>=0? toNumber(r[ix.prob]) : null,
@@ -1055,12 +1109,32 @@ function guessColumns(rows){
     year:-1, month:-1, yy:-1
   };
 }
+function calibrateRows(res, rows){
+  if(!res.list.length) return;
+  var first=res.list[0].name;
+  for(var i=0;i<rows.length;i++){
+    var cell='';
+    for(var c=0;c<rows[i].length;c++){
+      if(String(rows[i][c]||'').trim()===first){ cell=first; break; }
+    }
+    if(cell){
+      var off=(i+1)-res.list[0].row;
+      if(off){
+        res.list.forEach(function(e){ e.row=e.row+off; });
+        if(res.headerRow!==undefined) res.headerRow=res.headerRow+off-1;
+      }
+      return;
+    }
+  }
+}
+
 function parseRows(rows){
   if(!rows || !rows.length) throw new Error('데이터가 비어 있습니다.');
   var h=findHeader(rows);
   if(h){
-    var res=rowsToEvents(h.header, rows.slice(h.dataStart));
+    var res=rowsToEvents(h.header, rows.slice(h.dataStart), null, h.dataStart+1);
     if(res && res.list.length){
+      calibrateRows(res, rows);
       res.headerRow=h.dataStart;
       res.merged=h.header.join(' | ');
       res.mode='header';
@@ -1069,11 +1143,9 @@ function parseRows(rows){
   }
   var g=guessColumns(rows);
   if(g){
-    var body=rows.filter(function(r){
-      return r.filter(function(c){ return String(c||'').trim()!==''; }).length>=4;
-    });
-    var res3=rowsToEvents([], body, g);
+    var res3=rowsToEvents([], rows, g, 1);
     if(res3 && res3.list.length){
+      calibrateRows(res3, rows);
       res3.headerRow=0; res3.mode='guess';
       res3.mapping=g;
       return res3;
@@ -1169,6 +1241,53 @@ function fetchSheetText(rangeOverride){
   });
 }
 
+function applyFilters(list){
+  var before=list.length;
+  var out=list.slice();
+  if(cfg.rowFrom) out=out.filter(function(e){ return e.row>=parseInt(cfg.rowFrom,10); });
+  if(cfg.rowTo) out=out.filter(function(e){ return e.row<=parseInt(cfg.rowTo,10); });
+  if(cfg.onlyYear && cfg.year){
+    out=out.filter(function(e){ return e.name.indexOf(cfg.year)>=0; });
+  }
+  var kws=String(cfg.exclude||'').split(',').map(function(x){ return x.trim(); }).filter(Boolean);
+  if(kws.length){
+    out=out.filter(function(e){
+      for(var i=0;i<kws.length;i++){ if(e.name.indexOf(kws[i])>=0) return false; }
+      return true;
+    });
+  }
+  if(cfg.dropFuture && cfg.year){
+    var ty=parseInt(cfg.year,10);
+    out=out.filter(function(e){ return !e.yr || e.yr<=ty; });
+  }
+  return {list:out, before:before, dropped:before-out.length};
+}
+var lastParsed=[];
+function renderPreview(all, kept){
+  var box=$('previewBox'), head=$('previewHead'), rowsEl=$('previewRows');
+  if(!all || !all.length){ box.style.display='none'; return; }
+  box.style.display='block';
+  var sum=0;
+  kept.forEach(function(e){ if(e.budget) sum+=e.budget; });
+  head.innerHTML='<span>집계 '+kept.length+' / 읽은 '+all.length+'건 (제외된 행은 취소선)</span><span>합계 '+(sum/1e8).toFixed(1)+'억</span>';
+  var keptSet={};
+  kept.forEach(function(e){ keptSet[e.row]=1; });
+  rowsEl.innerHTML=all.map(function(e){
+    var on=keptSet[e.row];
+    return '<div class="pvrow" data-ex="'+e.row+'" style="display:flex;gap:8px;padding:3px 9px;cursor:pointer;'+(on?'':'opacity:.4;text-decoration:line-through')+'">'+
+      '<span style="flex:0 0 22px;color:var(--ink-3)">'+(on?'·':'✕')+'</span>'+
+      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(e.name.slice(0,24))+'</span>'+
+      '<span style="flex:0 0 58px;text-align:right">'+eok(e.budget)+'</span></div>';
+  }).join('');
+}
+function refreshFromParsed(){
+  if(!lastParsed.length) return;
+  var f=applyFilters(lastParsed);
+  setData(f.list,'구글 시트 연동');
+  renderPreview(lastParsed, f.list);
+  saveCfg();
+}
+
 function syncNow(silent){
   if(!cfg.id){
     if(!silent){ openModal(); msg('시트 주소를 먼저 넣어 주세요.','err'); }
@@ -1190,10 +1309,19 @@ function syncNow(silent){
     }
     throw err;
   }).then(function(res){
+    lastParsed=res.list.slice();
+    var f=applyFilters(res.list);
+    if(!f.list.length && f.before){
+      throw new Error('필터 조건에 맞는 행이 없습니다 (전체 '+f.before+'건). 시작/끝 행이나 연도 필터를 확인하세요.');
+    }
+    res.list=f.list;
+    renderPreview(hydrate(res.list.concat([])).length? res.list.map(function(e){ return {row:e.row, name:e.name, budget:e.budget}; }) : [], f.list.map(function(e){ return {row:e.row, name:e.name, budget:e.budget}; }));
+    if(f.dropped>0) res._dropped=f.dropped;
     setData(res.list,'구글 시트 연동');
     try{ localStorage.setItem('bidCSV', res._csv); }catch(e){}
     setSync('live');
     var extra=[];
+    if(f.dropped) extra.push('범위 밖/다른 연도 '+f.dropped+'건 제외');
     var und=res.list.filter(function(x){ return x.undated; }).length;
     if(und) extra.push('일정 미정 '+und+'건(해당 월 1일 표시)');
     if(res.skipped) extra.push('날짜 없음 '+res.skipped+'건 제외');
@@ -1239,6 +1367,13 @@ function fillCfgForm(){
   $('cfgRange').value = cfg.range||'';
   $('cfgYear').value = cfg.year||'2027';
   $('cfgAuto').value = cfg.auto||1;
+  $('cfgRowFrom').value = cfg.rowFrom||'';
+  $('cfgRowTo').value = cfg.rowTo||'';
+  $('cfgOnlyYear').checked = !!cfg.onlyYear;
+  $('cfgDropFuture').checked = cfg.dropFuture!==false;
+  $('cfgExclude').value = cfg.exclude||'';
+  $('cfgYearLbl').textContent = cfg.year||'2027';
+  $('cfgYearLbl2').textContent = cfg.year||'2027';
 }
 function readCfgForm(){
   var id=sheetId($('cfgUrl').value);
@@ -1252,6 +1387,11 @@ function readCfgForm(){
   cfg.range=$('cfgRange').value.trim().replace(/^.*!/,'');
   cfg.year=($('cfgYear').value||'2027').trim();
   var a=parseInt($('cfgAuto').value,10); cfg.auto=(a>=0&&a<=60)?a:1;
+  cfg.rowFrom=String($('cfgRowFrom').value||'').replace(/[^0-9]/g,'');
+  cfg.rowTo=String($('cfgRowTo').value||'').replace(/[^0-9]/g,'');
+  cfg.onlyYear=!!$('cfgOnlyYear').checked;
+  cfg.dropFuture=!!$('cfgDropFuture').checked;
+  cfg.exclude=$('cfgExclude').value.trim();
   saveCfg();
 }
 
