@@ -69,7 +69,7 @@
   .filters button:hover{background:rgba(16,30,38,.045)}
   .filters button.is-off{opacity:.42}
   .filters .swatch{width:12px;height:12px;flex:0 0 auto;border:1px solid var(--ink)}
-  .filters .swatch--conf{background:var(--ink)}
+  .filters .swatch--conf{background:linear-gradient(90deg,#12414C 0 26%,#5A2440 26% 50%,#33406E 50% 74%,#7A4A16 74% 100%)}
   .filters .swatch--est{background:#EFE7CF;border:1px dashed var(--gold)}
   .filters .swatch--tbd{background:transparent;border:1px dashed var(--ink-3)}
   .filters .cnt{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink-3)}
@@ -131,7 +131,9 @@
   .legend i{width:14px;height:7px;display:inline-block;border:1px solid var(--ink);background:var(--ink)}
   .legend i.l-est{background:#EFE7CF;border:1px dashed var(--gold)}
   .legend i.l-tbd{background:transparent;border:1px dashed var(--ink-3)}
+  .legend i.l-conf{background:linear-gradient(90deg,#12414C 0 26%,#5A2440 26% 50%,#33406E 50% 74%,#7A4A16 74% 100%);border-color:var(--ink-2)}
   .legend i.l-dl{width:8px;height:8px;border-radius:50%;border:2px solid var(--seal);background:transparent}
+  .legend i.l-ann{width:9px;height:9px;transform:rotate(45deg);background:var(--surface);border:1.5px solid var(--ink-2);margin:0 2px}
 
   .view{padding:0 30px}
   .view.is-hidden{display:none}
@@ -143,7 +145,7 @@
   .dow span{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--ink-3);padding:7px 8px;text-align:left}
   .dow span:nth-child(6),.dow span:nth-child(7){color:var(--seal);opacity:.8}
   .weeks{border-left:1px solid var(--line-soft);border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft)}
-  .week{position:relative;display:grid;grid-template-columns:repeat(7,1fr);min-height:calc(44px + var(--lanes, 0) * 29px);border-top:1px solid var(--line-soft)}
+  .week{position:relative;display:grid;grid-template-columns:repeat(7,1fr);min-height:calc(44px + var(--lanes, 0) * 29px + var(--ann, 0) * 14px);border-top:1px solid var(--line-soft)}
   .week:first-child{border-top:0}
   .day{position:relative;border-right:1px solid var(--line-soft);padding:6px 7px 0;min-width:0;background:rgba(252,252,248,.55)}
   .day:nth-child(7){border-right:0}
@@ -162,7 +164,7 @@
     left:calc(var(--s) / 7 * 100% + 3px);width:calc(var(--n) / 7 * 100% - 6px);
     padding:0 7px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:11px;letter-spacing:-.01em;
     pointer-events:auto;border-radius:1px;transition:transform .12s ease, box-shadow .12s ease}
-  .bar--conf{background:var(--ink);color:var(--card);border:1px solid var(--ink)}
+  .bar--conf{background:var(--c,var(--ink));color:#fff;border:1px solid var(--c,var(--ink))}
   .bar--est{background:#EFE7CF;color:var(--ink);border:1px dashed var(--gold)}
   .bar--tbd{background:rgba(252,252,248,.72);color:var(--ink-2);border:1px dashed var(--ink-3)}
   .bar:hover{transform:translateY(-1px);box-shadow:0 2px 0 rgba(16,30,38,.22);z-index:3}
@@ -172,7 +174,17 @@
   .bar.cont-r{padding-right:12px}
   .bar.cont-r::after{content:"›";position:absolute;right:4px;top:0;opacity:.6;font-size:12px}
   .bar .bar-dl{position:absolute;right:0;top:50%;transform:translate(50%,-50%);width:8px;height:8px;border-radius:50%;border:2px solid var(--seal);background:var(--card)}
-  .bar--conf .bar-dl{background:var(--ink)}
+  .bar--conf .bar-dl{background:transparent;border-color:var(--card)}
+  .ann{position:absolute;width:9px;height:9px;margin-left:-5px;transform:rotate(45deg);
+    top:calc(27px + var(--lanes, 0) * 29px + var(--al, 0) * 14px + 3px);
+    background:var(--c,var(--ink));border:1px solid var(--card);
+    box-shadow:0 0 0 1px rgba(16,30,38,.32);pointer-events:auto;z-index:2;
+    transition:transform .12s ease,box-shadow .12s ease}
+  .ann:hover{transform:rotate(45deg) scale(1.3);box-shadow:0 0 0 2px rgba(174,51,43,.55);z-index:4}
+  .ann-dot{display:inline-block;width:7px;height:7px;transform:rotate(45deg);margin-right:6px;
+    background:var(--c,var(--ink));border:1px solid rgba(16,30,38,.35);vertical-align:middle}
+  .cdot{display:inline-block;width:9px;height:9px;transform:rotate(45deg);margin-right:7px;
+    background:var(--c,var(--ink));vertical-align:middle}
 
   .gridfoot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 30px 0;font-size:10.5px;color:var(--ink-3);font-family:var(--mono);letter-spacing:.03em}
 
@@ -199,7 +211,7 @@
   .gdense .gcs{display:grid}
   .gdense .gc{border-left:1px solid var(--line-soft);text-align:center;font-family:var(--mono);font-size:10px;padding:6px 0;color:var(--ink-2);background:rgba(16,30,38,var(--v,0))}
   .gdense .gc.zero{color:var(--line)}
-  .gbar--conf{background:var(--ink);color:var(--card)}
+  .gbar--conf{background:var(--c,var(--ink))}
   .gbar--est{background:#EFE7CF;border:1px dashed var(--gold)}
   .gbar--tbd{background:transparent;border:1px dashed var(--ink-3)}
   .gbar:hover{outline:2px solid var(--seal);outline-offset:1px}
@@ -304,6 +316,11 @@
       <ul class="soon" id="soonList"></ul>
     </div>
 
+    <div class="rail-block">
+      <h2 class="rail-h">발표 일정 <span class="rail-h-num" id="annCount"></span></h2>
+      <ul class="soon" id="annList"></ul>
+    </div>
+
     <div class="syncbox">
       <div class="sync-row">
         <span class="sync-dot" id="syncDot"></span>
@@ -348,10 +365,11 @@
       <div class="monthnow"><b id="monthLabel">—</b><span class="monthcount" id="monthCount"></span></div>
       <div class="monthbar-spacer"></div>
       <p class="legend">
-        <span><i></i> 확정</span>
+        <span><i class="l-conf"></i> 확정</span>
         <span><i class="l-est"></i> 예상</span>
         <span><i class="l-tbd"></i> 미정</span>
         <span><i class="l-dl"></i> 마감</span>
+        <span><i class="l-ann"></i> 발표</span>
       </p>
     </div>
 
@@ -480,8 +498,10 @@
 
 var TODAY = new Date(); TODAY.setHours(0,0,0,0);
 var DAY = 86400000;
-var BUILD='v8';
+var BUILD='v12';
 var ST_LABEL = { conf:'확정', est:'예상', tbd:'미정' };
+/* 확정 사업은 사업별로 색을 달리한다 (어두운 톤 — 흰 글자 대비 확보) */
+var CONF_COLORS = ['#12414C','#5A2440','#33406E','#7A4A16','#2F4A32','#4B2A5E','#1F3A5F','#5C3A10','#0F4A3E','#6A2430'];
 var WD = ['일','월','화','수','목','금','토'];
 
 function addDays(dt,n){ var x=new Date(dt); x.setDate(x.getDate()+n); return x; }
@@ -535,13 +555,51 @@ function parseSoftDate(v, refYear, refMonth){
 }
 function inferStatus(statText, openText, closeText){
   var s=String(statText||'').trim();
-  if(/^(확정|ㅇ|o|y|예)$/i.test(s)) return 'conf';
-  if(/^(미정|공고전|미|n|x)$/i.test(s)) return 'tbd';
-  if(/^(예상|예정)/.test(s)) return 'est';
+  if(/^(확정|ㅇ|o|y|예)$/i.test(s) || /^확정/.test(s)) return 'conf';
+  if(/^(미정|공고전|미|n|x)$/i.test(s) || /^(미정|공고전)/.test(s)) return 'tbd';
+  if(/^(예상|예정|발표)/.test(s)) return 'est';
   var t=(String(openText||'')+' '+String(closeText||'')).trim();
   if(/공고전|미정|미지수/.test(t)) return 'tbd';
   if(/예상|예정|가선정|가능|검토|이후|발표/.test(t)) return 'est';
   return t? 'conf' : 'tbd';
+}
+/* E열("확정여부 및 발표")에서 발표일을 뽑는다 — "12/1(화) 발표", "12월 중순 발표" 등
+   1) 문자열 안의 확정 날짜(12/14) 중 '발표'에 가장 가까운 것
+   2) 없으면 "12월 중순" 같은 월 표현만 인정 (없는 날짜를 지어내지 않는다) */
+function parseAnnounce(text, refDate, refMonth){
+  var s=String(text||'');
+  if(s.indexOf('발표')<0) return null;
+  var refYear = refDate? refDate.getFullYear() : TODAY.getFullYear();
+  var anchor = s.indexOf('발표');
+  var m, best=null, bestDist=1e9;
+
+  var hard=/(\d{4}\s*[.\-\/년]\s*\d{1,2}\s*[.\-\/월]\s*\d{1,2})|(\d{1,2}\s*[.\-\/]\s*\d{1,2})/g;
+  while((m=hard.exec(s))){
+    var d=parseDateAny(m[0], refYear);
+    if(!d) continue;
+    var dist=Math.abs(m.index-anchor);
+    if(dist<bestDist){ bestDist=dist; best=d; }
+  }
+  if(best){
+    if(refDate){
+      var gap=diffDays(best, refDate);
+      if(gap < -200) best=new Date(best.getFullYear()+1, best.getMonth(), best.getDate());
+    }
+    return best;
+  }
+
+  var soft=/(\d{1,2})\s*월\s*(초|상순|중순|중|하순|말)?/g;
+  var bestSoft=null, bestSoftDist=1e9;
+  while((m=soft.exec(s))){
+    var mo=+m[1]; if(!(mo>=1&&mo<=12)) continue;
+    var q=m[2]||'';
+    var day = q==='초'||q==='상순'? 5 : (q==='하순'||q==='말')? 25 : 15;
+    var y=refYear;
+    if(refDate && mo < refDate.getMonth()+1 && (refDate.getMonth()+1-mo)>6) y=y+1;
+    var dist2=Math.abs(m.index-anchor);
+    if(dist2<bestSoftDist){ bestSoftDist=dist2; bestSoft=new Date(y, mo-1, day); }
+  }
+  return bestSoft;
 }
 function monthNum(v){
   if(v===null||v===undefined||v==='') return null;
@@ -618,12 +676,18 @@ function hydrate(list){
       id:'b'+i,
       name:String(e.name||'(사업명 없음)').trim(),
       status: ST_LABEL[e.status]? e.status : 'tbd',
+      ann: parseDateAny(e.ann)|| (e.statRaw? parseAnnounce(e.statRaw, c, null) : null),
+      color:null,
       o:o, c:c,
       budget:num(e.budget), prob:num(e.prob),
       undated:!!e.undated, partial:!!e.partial, row:e.row||0, yr:e.yr||null,
       note:String(e.note||'').trim(), hist:String(e.hist||'').trim()
     });
   });
+  /* 확정 사업에만 사업별 색 부여 — 마감일 순서로 안정적으로 배정 */
+  var confs=out.filter(function(e){ return e.status==='conf'; })
+    .sort(function(a,b){ return a.o-b.o || (a.name<b.name?-1:1); });
+  confs.forEach(function(e,i){ e.color = CONF_COLORS[i % CONF_COLORS.length]; });
   return out;
 }
 function setData(list, label){
@@ -687,6 +751,17 @@ function renderRail(){
       '<button data-open="'+x.e.id+'">'+esc(x.e.name)+'</button></li>';
   }).join('') : '<li><p class="soon-empty">75일 안에 마감하는 입찰이 없습니다.</p></li>';
 
+  var annSoon = all.filter(function(e){ return e.ann; })
+    .map(function(e){ return {e:e, d:diffDays(TODAY,e.ann)}; })
+    .filter(function(x){ return x.d>=-1; })
+    .sort(function(a,b){ return a.d-b.d; }).slice(0,3);
+  $('annCount').textContent = annSoon.length? annSoon.length+'건':'';
+  $('annList').innerHTML = annSoon.length? annSoon.map(function(x){
+    var dd = x.d===0?'D-DAY':(x.d>0?'D-'+x.d:'D+'+(-x.d));
+    return '<li class="'+(x.d<=14?'is-near':'')+'"><div class="soon-top"><b>'+dd+'</b><span>'+(x.e.ann.getMonth()+1)+'/'+x.e.ann.getDate()+' '+WD[x.e.ann.getDay()]+' 발표</span></div>'+
+      '<button data-open="'+x.e.id+'"><i class="ann-dot" style="--c:'+(x.e.color||'var(--ink)')+'"></i>'+esc(x.e.name)+'</button></li>';
+  }).join('') : '<li><p class="soon-empty">예정된 발표 일정이 없습니다. 시트 E열 “확정여부 및 발표”에 날짜를 적으면 여기에 뜹니다.</p></li>';
+
   $('syncDot').className='sync-dot'+(sync.state==='live'?' is-live':sync.state==='busy'?' is-busy':sync.state==='err'?' is-err':'');
   $('syncLabel').textContent = sync.state==='live'? '시트 연동 중' : sync.state==='busy'? '동기화 중…' : sync.state==='err'? '연결 오류' : '시트 연결 전';
   $('syncTime').textContent = sync.at? String(sync.at.getHours()).padStart(2,'0')+':'+String(sync.at.getMinutes()).padStart(2,'0') : '';
@@ -734,11 +809,23 @@ function renderMonth(){
       var contR = (b.s+b.n-1)===6 && e.c>we;
       var mark = contL? '<span class="bar-mark">‹</span>' : '<span class="bar-open"></span>';
       var dl = (e.c>=ws && e.c<=we)? '<span class="bar-dl"></span>':'';
-      return '<button class="bar bar--'+e.status+(contR?' cont-r':'')+'" style="--s:'+b.s+';--n:'+b.n+';--lane:'+b.lane+'" data-open="'+e.id+'" title="'+esc(e.name)+' · '+ST_LABEL[e.status]+' · '+eok(e.budget)+'">'+
+      var tint = e.color? '--c:'+e.color+';' : '';
+      return '<button class="bar bar--'+e.status+(contR?' cont-r':'')+'" style="'+tint+'--s:'+b.s+';--n:'+b.n+';--lane:'+b.lane+'" data-open="'+e.id+'" title="'+esc(e.name)+' · '+ST_LABEL[e.status]+' · '+eok(e.budget)+(e.ann?' · '+ym(e.ann)+' 발표':'')+'">'+
         mark+esc(e.name)+dl+'</button>';
     }).join('');
 
-    html+='<div class="week" style="--lanes:'+laneEnd.length+'">'+cells+'<div class="bars">'+barsHtml+'</div></div>';
+    /* 발표일 마커 — 막대 아래 별도 줄에 다이아몬드로 표시 */
+    var anns = visible().filter(function(e){ return e.ann && e.ann>=ws && e.ann<=we; })
+      .sort(function(x,y){ return x.ann-y.ann || (x.name<y.name?-1:1); });
+    var annSeen={}, annMax=0, annHtml='';
+    anns.forEach(function(e){
+      var k=ymd(e.ann), r=annSeen[k]||0; annSeen[k]=r+1;
+      if(r+1>annMax) annMax=r+1;
+      var col=diffDays(ws,e.ann);
+      annHtml+='<button class="ann" data-open="'+e.id+'" style="left:'+((col+0.5)/7*100).toFixed(3)+'%;--al:'+r+';--c:'+(e.color||'var(--ink)')+'" title="'+esc(e.name)+' · '+(e.ann.getMonth()+1)+'/'+e.ann.getDate()+' 발표" aria-label="'+esc(e.name)+' 발표일"></button>';
+    });
+
+    html+='<div class="week" style="--lanes:'+laneEnd.length+';--ann:'+annMax+'">'+cells+'<div class="bars">'+barsHtml+annHtml+'</div></div>';
   }
   $('weeks').innerHTML=html;
 }
@@ -784,7 +871,7 @@ function renderGantt(){
     body+='<div class="grow"><div class="gmeta"><span class="gmon">'+(e.o.getMonth()+1)+'월</span>'+
       '<button class="gname" data-open="'+e.id+'">'+esc(e.name)+'</button>'+
       '<span class="gsum">'+eok(e.budget)+'</span></div>'+
-      '<div class="gtrack" style="--cols:'+cols+'"><button class="gbar gbar--'+e.status+'" data-open="'+e.id+'" style="left:'+left+'%;width:'+width+'%" title="'+esc(e.name)+' · '+eok(e.budget)+'"></button></div></div>';
+      '<div class="gtrack" style="--cols:'+cols+'"><button class="gbar gbar--'+e.status+'" data-open="'+e.id+'" style="left:'+left+'%;width:'+width+'%;'+(e.color?'background:'+e.color+';':'')+'" title="'+esc(e.name)+' · '+eok(e.budget)+'"></button></div></div>';
   });
   $('gantt').innerHTML=head+dense+body;
   $('gNote').textContent='막대 = 공고일 → 마감일 · '+rangeText()+' · '+rows.length+'건';
@@ -816,7 +903,7 @@ function openEvent(id){
   var d=diffDays(TODAY,e.c);
   var ddTxt = e.undated? '일정 미정' : (d===0?'D-DAY':(d>0?'D-'+d:'마감 D+'+(-d)));
   var ratio=(e.budget&&e.prob!==null)?Math.round(e.prob/e.budget*100):null;
-  $('dEyebrow').textContent = ST_LABEL[e.status]+' · '+ym(e.o)+' 입찰';
+  $('dEyebrow').textContent = ST_LABEL[e.status]+' · '+ym(e.o)+' 입찰'+(e.ann? ' · 발표 '+ym(e.ann):'');
   $('dTitle').textContent = e.name;
   $('dBody').innerHTML =
     '<div class="dtrack">'+
@@ -828,7 +915,8 @@ function openEvent(id){
     '<dl class="facts">'+
       '<dt>사업비</dt><dd class="num">'+won(e.budget)+'원</dd>'+
       '<dt>긍정 수주</dt><dd class="num">'+(e.prob!==null? won(e.prob)+'원'+(ratio!==null?' ('+ratio+'%)':''):'—')+'</dd>'+
-      '<dt>확정 여부</dt><dd>'+ST_LABEL[e.status]+'</dd>'+
+      '<dt>확정 여부</dt><dd>'+(e.status==='conf'&&e.color?'<i class="cdot" style="--c:'+e.color+'"></i>':'')+ST_LABEL[e.status]+'</dd>'+
+      (e.ann? '<dt>발표일</dt><dd class="num">'+ym(e.ann)+'.'+String(e.ann.getDate()).padStart(2,'0')+' '+WD[e.ann.getDay()]+'요일</dd>':'')+
       '<dt>입찰 기간</dt><dd class="num">'+(e.undated? '미정' : (diffDays(e.o,e.c)+1)+'일')+'</dd>'+
     '</dl>'+
     (e.undated? '<div class="dsec"><h3>일정</h3><p>시트에 공고일·마감일이 아직 없습니다(“공고전”). 월 칸을 기준으로 이 달에만 표시했습니다.</p></div>' : '')+
@@ -838,14 +926,23 @@ function openEvent(id){
 }
 function openDay(key){
   var dt=parseDateAny(key); if(!dt) return;
-  var list=visible().filter(function(e){ return e.o<=dt && e.c>=dt; });
+  var items=[], seen={};
+  visible().forEach(function(e){
+    if(e.o<=dt && e.c>=dt){
+      items.push({e:e, tag: sameDay(e.c,dt)?'마감일':(sameDay(e.o,dt)?'공고일':ST_LABEL[e.status])});
+      seen[e.id]=1;
+    }
+  });
+  visible().forEach(function(e){
+    if(e.ann && sameDay(e.ann,dt) && !seen[e.id]) items.push({e:e, tag:'발표일'});
+  });
   $('dEyebrow').textContent = dt.getFullYear()+'.'+String(dt.getMonth()+1).padStart(2,'0')+'.'+String(dt.getDate()).padStart(2,'0')+' '+WD[dt.getDay()]+'요일';
-  $('dTitle').textContent='이 날 진행 중인 입찰 '+list.length+'건';
-  $('dBody').innerHTML = list.length? list.map(function(e){
-    var tag = sameDay(e.c,dt)?'마감일':(sameDay(e.o,dt)?'공고일':ST_LABEL[e.status]);
-    return '<div class="dsec"><h3>'+tag+'</h3><button class="gname" data-open="'+e.id+'" style="font-size:13px;font-weight:500">'+esc(e.name)+'</button>'+
-      '<p style="margin-top:4px;font-family:var(--mono);font-size:11px;color:var(--ink-3)">'+(e.o.getMonth()+1)+'/'+e.o.getDate()+' → '+(e.c.getMonth()+1)+'/'+e.c.getDate()+' · '+eok(e.budget)+'</p></div>';
-  }).join('') : '<p class="drawer-empty">이 날은 진행 중인 입찰이 없습니다.</p>';
+  $('dTitle').textContent='이 날 일정 '+items.length+'건';
+  $('dBody').innerHTML = items.length? items.map(function(it){
+    var e=it.e, tag=it.tag;
+    return '<div class="dsec"><h3>'+(e.status==='conf'&&e.color?'<i class="cdot" style="--c:'+e.color+'"></i>':'')+tag+'</h3><button class="gname" data-open="'+e.id+'" style="font-size:13px;font-weight:500">'+esc(e.name)+'</button>'+
+      '<p style="margin-top:4px;font-family:var(--mono);font-size:11px;color:var(--ink-3)">'+(e.o.getMonth()+1)+'/'+e.o.getDate()+' → '+(e.c.getMonth()+1)+'/'+e.c.getDate()+' · '+eok(e.budget)+(e.ann?' · 발표 '+(e.ann.getMonth()+1)+'/'+e.ann.getDate():'')+'</p></div>';
+  }).join('') : '<p class="drawer-empty">이 날은 예정된 일정이 없습니다.</p>';
   showDrawer();
 }
 function showDrawer(){ $('drawer').classList.add('is-on'); $('drawer').setAttribute('aria-hidden','false'); $('backdrop').classList.add('is-on'); }
@@ -1035,9 +1132,19 @@ function rowsToEvents(header, data, ixOverride, baseRow){
       else { skipped++; return; }
     }
     if(o && c && c<o){ var t0=o; o=c; c=t0; }
+    var statTxt = ix.stat>=0? String(r[ix.stat]||'') : '';
+    // 상태 열을 못 찾았거나 발표 키워드가 없으면 행 전체에서 '발표'가 있는 칸을 찾는다
+    if(statTxt.indexOf('발표')<0){
+      for(var ci=0; ci<r.length; ci++){
+        if(String(r[ci]||'').indexOf('발표')>=0){ statTxt=String(r[ci]); break; }
+      }
+    }
+    var annD = parseAnnounce(statTxt, c, mo);
     out.push({
       name:name,
-      status: inferStatus(ix.stat>=0? r[ix.stat] : '', oTxt, cTxt),
+      status: inferStatus(statTxt, oTxt, cTxt),
+      ann: annD? ymd(annD) : '',
+      statRaw: statTxt,
       open: ymd(o), close: ymd(c), row: _base+_idx, yr: yr,
       undated: undated, partial: partial,
       budget: ix.budget>=0? toNumber(r[ix.budget]) : null,
@@ -1528,6 +1635,7 @@ window.addEventListener('resize', function(){
 
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
